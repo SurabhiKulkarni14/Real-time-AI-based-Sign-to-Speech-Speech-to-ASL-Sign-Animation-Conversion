@@ -144,7 +144,56 @@ Sign Language → Speech
 This browser-based module uses MediaPipe Hands and TensorFlow.js for real-time gesture recognition. Each webcam frame is processed by MediaPipe to detect hand landmarks (21 points per hand). These coordinates are fed into a custom neural network (trained on Indian sign gestures) that runs in the browser via TensorFlow.js. The model classifies the hand pose into a specific ISL letter or word. The recognized text is then both displayed on-screen and converted to audio using the browser’s Text-to-Speech engine (Web Speech API’s SpeechSynthesis).
 
  <img width="1920" height="1080" alt="Screenshot 2026-01-21 120950" src="https://github.com/user-attachments/assets/1faeff80-00f4-4b85-a00b-0a77875f298b" />
+Model Training & Browser Integration
 
+The Sign Language to Speech module uses a custom-trained machine learning model, developed and trained by our team specifically for Indian Sign Language (ISL) recognition.
+
+Model Training
+
+The model was trained offline using Python on a curated dataset of ISL hand gestures.
+
+Hand landmarks were extracted using MediaPipe Hands (21 key points per hand).
+
+These landmarks were used as features to train a gesture classification model.
+
+The training process focused on:
+
+Accurate detection of ISL alphabets and basic words
+
+Real-time performance
+
+Robustness to hand movement and lighting variations
+
+Model Conversion for Web Deployment
+
+After successful training and validation, the trained model was converted for browser compatibility.
+
+The Python-trained model was exported and converted into TensorFlow.js format using the TensorFlow.js converter.
+
+This conversion generates the following files:
+
+model.json – Model architecture
+
+weights.bin – Trained weights
+
+metadata.json – Label and class information
+
+my_model/
+├── model.json
+├── weights.bin
+└── metadata.json
+
+Browser-Based Inference
+
+The converted .json model is loaded directly in the browser using TensorFlow.js.
+
+This allows:
+
+Client-side inference (no backend/server required)
+
+Faster real-time predictions
+
+Improved privacy (no video data is sent to a server)
 
 In summary, the flow is: Webcam → MediaPipe Hands (21 landmarks) → TF.js Classifier → Text → TTS. This runs entirely client-side (no server needed) for low latency. The use of MediaPipe/TF.js enables “real-time performance” even on standard hardware.
 
