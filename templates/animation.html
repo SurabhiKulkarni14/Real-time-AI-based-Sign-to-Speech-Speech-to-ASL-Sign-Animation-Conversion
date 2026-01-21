@@ -1,0 +1,277 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+
+<style>
+    /* ---------- LAYOUT ---------- */
+    .container {
+        display: flex;
+        flex-wrap: wrap;
+        width: 100%;
+        gap: 15px;
+    }
+    .left, .right {
+        flex: 1;
+        min-width: 320px;
+        padding: 15px;
+        background: #f9f9ff;
+        border-radius: 10px;
+        box-shadow: 0 0 10px #c9c9c9;
+    }
+
+    /* ---------- INPUT ---------- */
+    .mytext {
+        width: 70%;
+        padding: 10px;
+        border-radius: 6px;
+        border: 1px solid #aaa;
+    }
+    .mic img {
+        cursor: pointer;
+    }
+    .submit {
+        padding: 10px 20px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+
+    /* ---------- KEYWORD LIST ---------- */
+    #list li {
+        list-style-type: none;
+        padding: 5px;
+        font-size: 18px;
+        background: #fff9d6;
+        margin: 4px;
+        border-radius: 5px;
+        display: inline-block;
+    }
+
+    /* Highlight word that is currently playing */
+    .active-word {
+        background: #d0fff0 !important;
+        color: #00b386;
+        font-weight: bold;
+        font-size: 22px;
+    }
+
+    /* ---------- VIDEO PLAYER ---------- */
+    #videoPlayer {
+        width: 100%;
+        max-width: 600px;
+        height: auto;
+        border-radius: 10px;
+    }
+</style>
+
+<div class="container">
+
+    <!-- ---------- LEFT SECTION ---------- -->
+    <div class="left">
+        <h2 align="center">Enter Text or Use Mic</h2><br>
+
+        <form action="" method="post">
+            {% csrf_token %}
+            <input type="text" name="sen" class="mytext" id="speechToText"
+                   placeholder="Type your sentence here...">
+
+            <button type="button" class="mic" onclick="record()">
+                <img src="{% static 'mic3.png' %}" height="32" width="38">
+            </button>
+
+            &nbsp;&nbsp;
+            <input type="submit" value="Submit" class="submit">
+        </form>
+
+        <br>
+
+        <table cellspacing="20px">
+            <tr>
+                <td><b>Entered Text:</b></td>
+                <td>{{ text }}</td>
+            </tr>
+
+            <tr>
+                <td><b>Keywords:</b></td>
+                <td>
+                    {% if words %}
+                        <ul id="list">
+                            {% for word in words %}
+                                <li>{{ word }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p style="color:red">No keywords detected</p>
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- ---------- RIGHT SECTION ---------- -->
+    <div class="right">
+        <h2 align="center">Sign Language Animation</h2>
+
+        <div style="text-align:center;">
+            <button class="submit" onclick="playPause()">Play/Pause</button>
+            <button class="submit" onclick="stopVideo()">Stop</button>
+            <button class="submit" onclick="replayVideos()">Replay</button>
+
+            &nbsp;&nbsp;
+
+            <select id="speedControl" onchange="changeSpeed()" class="submit">
+                <option value="1">Speed: 1x</option>
+                <option value="1.5">1.5x</option>
+                <option value="2">2x</option>
+            </select>
+
+            <br><br>
+
+            <video id="videoPlayer" preload="auto" autoplay>
+                <source src="" type="video/mp4">
+                Browser does not support video.
+            </video>
+        </div>
+    </div>
+</div>
+
+
+<!-- ✅ JAVASCRIPT SECTION -->
+<script>
+
+    /* -------------------------------------------------
+       ✅ Speech to Text (Mic Input)
+    --------------------------------------------------- */
+    function record() {
+        let recognition = new webkitSpeechRecognition();
+        recognition.lang = "en-IN";
+
+        recognition.onresult = function (event) {
+            document.getElementById("speechToText").value =
+                event.results[0][0].transcript;
+        };
+
+        recognition.onerror = function (e) {
+            alert("Microphone error: " + e.error);
+        };
+
+        recognition.start();
+    }
+
+
+
+
+    /* -------------------------------------------------
+       ✅ Play Sign Language Videos in Sequence
+    --------------------------------------------------- */
+    let videoPlayer = document.getElementById("videoPlayer");
+    let videoSources = [];
+    let currentIndex = 0;
+
+    function loadVideos() {
+
+        let listItems = document.querySelectorAll("#list li");
+        videoSources = [];
+        currentIndex = 0;
+
+        listItems.forEach(li => {
+            let word = li.innerHTML.trim();
+
+            if (word === "") return;
+
+            let path = "/static/" + word + ".mp4";
+            videoSources.push(path);
+
+            // Warn if video missing (for debugging)
+            fetch(path).then(res => {
+                if (!res.ok)
+                    console.log("Missing video file:", path);
+            });
+        });
+    }
+
+
+    function playVideo(index) {
+
+        let listItems = document.querySelectorAll("#list li");
+
+        listItems.forEach(item => item.classList.remove("active-word"));
+
+        if (listItems[index])
+            listItems[index].classList.add("active-word");
+
+        videoPlayer.src = videoSources[index];
+        videoPlayer.load();
+        videoPlayer.play();
+    }
+
+
+
+    videoPlayer.addEventListener("ended", function () {
+        currentIndex++;
+
+        if (currentIndex < videoSources.length) {
+            playVideo(currentIndex);
+        }
+    });
+
+
+    function play() {
+        loadVideos();
+
+        if (videoSources.length === 0) {
+            alert("No videos to play.");
+            return;
+        }
+        playVideo(0);
+    }
+
+
+
+    function playPause() {
+        if (videoPlayer.paused) {
+            if (currentIndex === 0) play();
+            else videoPlayer.play();
+        } else {
+            videoPlayer.pause();
+        }
+    }
+
+
+    function stopVideo() {
+        videoPlayer.pause();
+        videoPlayer.currentTime = 0;
+        currentIndex = 0;
+
+        document.querySelectorAll("#list li")
+            .forEach(item => item.classList.remove("active-word"));
+    }
+
+    /* ✅ NEW — Replay Function */
+    function replayVideos() {
+        stopVideo();
+        play();
+    }
+
+
+    /* -------------------------------------------------
+       ✅ Change Video Speed
+    --------------------------------------------------- */
+    function changeSpeed() {
+        let speed = document.getElementById("speedControl").value;
+        videoPlayer.playbackRate = speed;
+    }
+
+
+    /* ✅ Auto-play after form submission */
+    window.onload = function () {
+        let count = document.querySelectorAll("#list li").length;
+        if (count > 0) play();
+    };
+
+</script>
+
+{% endblock %}
